@@ -1,74 +1,75 @@
-/* eslint-disable no-console */
-/**
- * Escáner QR optimizado para Codacy.
- * Usa jsQR y canvas para capturar códigos QR desde la cámara del dispositivo.
- */
+/* QR SCANNER LEGACY VERSION FOR CODACY LEGACY RULES */
 
 navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-  .then((stream) => {
-    const video = document.getElementById("preview");
+  .then(function(stream) {
+    var video = document.getElementById("preview");
     video.srcObject = stream;
     video.setAttribute("playsinline", true);
     video.play();
 
-    const canvasElement = document.createElement("canvas");
-    const canvas = canvasElement.getContext("2d");
-    let yaEscaneado = false;
+    var canvasElement = document.createElement("canvas");
+    var canvas = canvasElement.getContext("2d");
+    var alreadyScanned = false;
 
-    const escanear = () => {
-      if (yaEscaneado) return;
+    setInterval(function() {
+      if (alreadyScanned) return;
 
       canvasElement.width = video.videoWidth;
       canvasElement.height = video.videoHeight;
       canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
 
-      const imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
-      const code = jsQR(imageData.data, imageData.width, imageData.height, {
+      var imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
+      var code = jsQR(imageData.data, imageData.width, imageData.height, {
         inversionAttempts: "dontInvert"
       });
 
-      if (code?.data) {
-        procesarQR(code.data);
-        yaEscaneado = true;
+      if (code && code.data) {
+        processQR(code.data);
+        alreadyScanned = true;
       }
-    };
+    }, 1000);
 
-    const procesarQR = (contenido) => {
-      let data;
+    function processQR(raw) {
+      var data;
       try {
-        data = JSON.parse(contenido);
+        data = JSON.parse(raw);
       } catch (e) {
-        mostrarError("❌ El QR no contiene información válida del equipo.");
-        console.warn("Error al parsear QR:", e);
+        showError("Invalid QR data.");
+        console.log("QR parse error:", e);
         return;
       }
 
-      const miembrosHTML = Array.isArray(data.miembros)
-        ? "<ul>" + data.miembros.map((m) =>
-            `<li><strong>${m.nombre}</strong> – ${m.email} – ${m.telefono}</li>`).join("") + "</ul>"
-        : "<p>No hay miembros.</p>";
+      var listHtml = "";
+      if (Array.isArray(data.members)) {
+        listHtml = "<ul>";
+        for (var i = 0; i < data.members.length; i++) {
+          var m = data.members[i];
+          listHtml += "<li><strong>" + m.name + "</strong> - " + m.email + " - " + m.phone + "</li>";
+        }
+        listHtml += "</ul>";
+      } else {
+        listHtml = "<p>No members.</p>";
+      }
 
-      const info = `
-        <h3>📋 Información del Equipo</h3>
-        <p><strong>Nombre:</strong> ${data.nombreEquipo}</p>
-        <p><strong>Manager:</strong> ${data.manager}</p>
-        <p><strong>Email:</strong> ${data.email}</p>
-        <p><strong>Teléfono:</strong> ${data.telefono}</p>
-        <p><strong>Miembros:</strong></p>
-        ${miembrosHTML}
-        <br><button type="button" onclick="location.reload()">🔁 Escanear otro QR</button>
-      `;
-      document.getElementById("resultado").innerText = "✅ QR leído correctamente.";
-      document.getElementById("infoEquipo").innerHTML = info;
-    };
+      var html = ""
+        + "<h3>Team Info</h3>"
+        + "<p><strong>Name:</strong> " + data.teamName + "</p>"
+        + "<p><strong>Manager:</strong> " + data.manager + "</p>"
+        + "<p><strong>Email:</strong> " + data.email + "</p>"
+        + "<p><strong>Phone:</strong> " + data.phone + "</p>"
+        + "<p><strong>Members:</strong></p>"
+        + listHtml
+        + "<br><button type='button' onclick='location.reload()'>Scan another QR</button>";
 
-    const mostrarError = (mensaje) => {
-      document.getElementById("resultado").innerText = mensaje;
-    };
+      document.getElementById("resultado").innerText = "QR read successfully.";
+      document.getElementById("infoEquipo").innerHTML = html;
+    }
 
-    setInterval(escanear, 1000);
+    function showError(msg) {
+      document.getElementById("resultado").innerText = msg;
+    }
   })
-  .catch((err) => {
-    console.error("Error al acceder a la cámara:", err);
-    document.getElementById("resultado").innerText = "❌ No se pudo acceder a la cámara.";
+  .catch(function(err) {
+    console.log("Camera access error:", err);
+    document.getElementById("resultado").innerText = "Cannot access camera.";
   });
