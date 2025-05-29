@@ -1,19 +1,21 @@
 document.addEventListener("DOMContentLoaded", function () {
-    var loginButton = document.getElementById("loginButton");
-    var registroLink = document.getElementById("registroLink");
-    var logoutButton = document.getElementById("logout");
-    var authContainer = document.getElementById("authContainer");
-    var authButton = document.getElementById("authButton");
-    var toggleAuth = document.getElementById("toggleAuth");
-    var authTitle = document.getElementById("authTitle");
-    var extraFields = document.getElementById("extraFields");
+    const loginButton = document.getElementById("loginButton");
+    const registroLink = document.getElementById("registroLink");
+    const logoutButton = document.getElementById("logout");
+    const authContainer = document.getElementById("authContainer");
+    const authButton = document.getElementById("authButton");
+    const toggleAuth = document.getElementById("toggleAuth");
+    const authTitle = document.getElementById("authTitle");
+    const extraFields = document.getElementById("extraFields");
+    
+    let isRegistering = false;
 
-    var isRegistering = false;
-
+    // Mostrar formulario de login
     loginButton.addEventListener("click", function () {
         authContainer.style.display = "flex";
     });
 
+    // Alternar entre "Iniciar sesión" y "Registrarse"
     toggleAuth.addEventListener("click", function () {
         isRegistering = !isRegistering;
         if (isRegistering) {
@@ -29,19 +31,61 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
-    authButton.addEventListener("click", function () {
-        var email = getValue("email");
-        var password = getValue("password");
+    // Manejo de autenticación
+    authButton.addEventListener("click", function () ){
+        const email = document.getElementById("email").value;
+        const password = document.getElementById("password").value;
 
-        if (!validarLogin(email, password)) return;
+        if (!email || !password) {
+            alert("Todos los campos son obligatorios.");
+            return;
+        }
 
         if (isRegistering) {
-            manejarRegistro(email, password);
+            // Registro de usuario
+            const nombreCompleto = document.getElementById("nombreCompleto").value;
+            const telefono = document.getElementById("telefono").value;
+            const ciudad = document.getElementById("ciudad").value;
+
+            if (!nombreCompleto || !telefono || !ciudad) {
+                alert("Todos los campos son obligatorios para registrarte.");
+                return;
+            }
+
+            const userData = {
+                email,
+                password,
+                nombreCompleto,
+                telefono,
+                ciudad,
+                equipos: [] // 👈 Aquí se guarda espacio para los equipos
+            };
+            localStorage.setItem(email, JSON.stringify(userData));
+            
+            alert("Registro exitoso. Ahora puedes iniciar sesión.");
+    toggleAuth.click();
+}
+
         } else {
-            manejarLogin(email, password);
+            // Inicio de sesión
+            const storedUser = localStorage.getItem(email);
+            if (storedUser) {
+                const user = JSON.parse(storedUser);
+                if (user.password === password) {
+                    alert("Inicio de sesión exitoso.");
+                    localStorage.setItem("loggedInUser", email);
+                    authContainer.style.display = "none";
+                    updateUI();
+                } else {
+                    alert("Contraseña incorrecta.");
+                }
+            } else {
+                alert("Usuario no registrado.");
+            }
         }
     });
 
+    // Cerrar sesión
     logoutButton.addEventListener("click", function () {
         localStorage.removeItem("loggedInUser");
         updateUI();
@@ -59,136 +103,82 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
-    function getValue(id) {
-        var el = document.getElementById(id);
-        return el ? el.value.trim() : "";
-    }
-
-    function validarLogin(email, password) {
-        if (!email || !password) {
-            alert("Todos los campos son obligatorios.");
-            return false;
-        }
-        return true;
-    }
-
-    function manejarRegistro(email, password) {
-        var nombreCompleto = getValue("nombreCompleto");
-        var telefono = getValue("telefono");
-        var ciudad = getValue("ciudad");
-
-        if (!nombreCompleto || !telefono || !ciudad) {
-            alert("Todos los campos son obligatorios para registrarte.");
-            return;
-        }
-
-        var userData = {
-            email: email,
-            password: password,
-            nombreCompleto: nombreCompleto,
-            telefono: telefono,
-            ciudad: ciudad,
-            equipos: []
-        };
-
-        localStorage.setItem(email, JSON.stringify(userData));
-        alert("Registro exitoso. Ahora puedes iniciar sesión.");
-        toggleAuth.click();
-    }
-
-    function manejarLogin(email, password) {
-        var storedUser = localStorage.getItem(email);
-        if (storedUser) {
-            var user = JSON.parse(storedUser);
-            if (user.password === password) {
-                alert("Inicio de sesión exitoso.");
-                localStorage.setItem("loggedInUser", email);
-                authContainer.style.display = "none";
-                updateUI();
-            } else {
-                alert("Contraseña incorrecta.");
-            }
-        } else {
-            alert("Usuario no registrado.");
-        }
-    }
-
     updateUI();
 });
 
-document.addEventListener("DOMContentLoaded", function () {
-    var infoTableBody = document.querySelector("#infoTable tbody");
-
-    if (infoTableBody) {
-        var registros = JSON.parse(localStorage.getItem("inscripciones")) || [];
-
-        infoTableBody.innerHTML = "";
-
-        if (registros.length === 0) {
-            var fila = infoTableBody.insertRow();
-            var celda = fila.insertCell(0);
-            celda.colSpan = 4;
-            celda.textContent = "No hay inscripciones registradas";
-            celda.style.textAlign = "center";
-        } else {
-            registros.forEach(function (registro) {
-                var fila = infoTableBody.insertRow();
-                fila.insertCell(0).textContent = registro.nombre;
-                fila.insertCell(1).textContent = registro.email;
-                fila.insertCell(2).textContent = registro.telefono;
-                fila.insertCell(3).textContent = registro.curso;
+    document.addEventListener("DOMContentLoaded", function () {
+        const infoTableBody = document.querySelector("#infoTable tbody");
+    
+        if (infoTableBody) {
+            let registros = JSON.parse(localStorage.getItem("inscripciones")) || [];
+    
+            infoTableBody.innerHTML = ""; // Limpia la tabla antes de insertar datos
+    
+            if (registros.length === 0) {
+                let fila = infoTableBody.insertRow();
+                let celda = fila.insertCell(0);
+                celda.colSpan = 4;
+                celda.textContent = "No hay inscripciones registradas";
+                celda.style.textAlign = "center";
+            } else {
+                registros.forEach(registro => {
+                    let fila = infoTableBody.insertRow();
+                    fila.insertCell(0).textContent = registro.nombre;
+                    fila.insertCell(1).textContent = registro.email;
+                    fila.insertCell(2).textContent = registro.telefono;
+                    fila.insertCell(3).textContent = registro.curso;
+                });
+            }
+        }
+    });
+    
+    
+    document.getElementById("formRegistro").addEventListener("submit", function (event) {
+        event.preventDefault();
+    
+        let nombre = document.getElementById("nombre").value;
+        let email = document.getElementById("email").value;
+        let telefono = document.getElementById("telefono").value;
+        let curso = document.getElementById("curso").value;
+    
+        let inscripciones = JSON.parse(localStorage.getItem("inscripciones")) || [];
+        inscripciones.push({ nombre, email, telefono, curso });
+    
+        localStorage.setItem("inscripciones", JSON.stringify(inscripciones));
+    
+        alert("Inscripción guardada con éxito");
+        this.reset();
+    });
+    document.addEventListener("DOMContentLoaded", function () {
+        const formulario = document.querySelector("#formularioInscripcion");
+    
+        if (formulario) {
+            formulario.addEventListener("submit", function (event) {
+                event.preventDefault();
+    
+                let nombre = document.querySelector("#nombre").value;
+                let email = document.querySelector("#email").value;
+                let telefono = document.querySelector("#telefono").value;
+                let curso = document.querySelector("#curso").value;
+    
+                if (nombre && email && telefono && curso) {
+                    let inscripciones = JSON.parse(localStorage.getItem("inscripciones")) || [];
+    
+                    let nuevoRegistro = {
+                        nombre: nombre,
+                        email: email,
+                        telefono: telefono,
+                        curso: curso
+                    };
+    
+                    inscripciones.push(nuevoRegistro);
+                    localStorage.setItem("inscripciones", JSON.stringify(inscripciones));
+    
+                    alert("Inscripción guardada correctamente.");
+                    formulario.reset();
+                } else {
+                    alert("Por favor, complete todos los campos.");
+                }
             });
         }
-    }
-});
-
-document.getElementById("formRegistro").addEventListener("submit", function (event) {
-    event.preventDefault();
-
-    var nombre = document.getElementById("nombre").value;
-    var email = document.getElementById("email").value;
-    var telefono = document.getElementById("telefono").value;
-    var curso = document.getElementById("curso").value;
-
-    var inscripciones = JSON.parse(localStorage.getItem("inscripciones")) || [];
-    inscripciones.push({ nombre: nombre, email: email, telefono: telefono, curso: curso });
-
-    localStorage.setItem("inscripciones", JSON.stringify(inscripciones));
-
-    alert("Inscripción guardada con éxito");
-    this.reset();
-});
-
-document.addEventListener("DOMContentLoaded", function () {
-    var formulario = document.querySelector("#formularioInscripcion");
-
-    if (formulario) {
-        formulario.addEventListener("submit", function (event) {
-            event.preventDefault();
-
-            var nombre = document.querySelector("#nombre").value;
-            var email = document.querySelector("#email").value;
-            var telefono = document.querySelector("#telefono").value;
-            var curso = document.querySelector("#curso").value;
-
-            if (nombre && email && telefono && curso) {
-                var inscripciones = JSON.parse(localStorage.getItem("inscripciones")) || [];
-
-                var nuevoRegistro = {
-                    nombre: nombre,
-                    email: email,
-                    telefono: telefono,
-                    curso: curso
-                };
-
-                inscripciones.push(nuevoRegistro);
-                localStorage.setItem("inscripciones", JSON.stringify(inscripciones));
-
-                alert("Inscripción guardada correctamente.");
-                formulario.reset();
-            } else {
-                alert("Por favor, complete todos los campos.");
-            }
-        });
-    }
-});
+    });
