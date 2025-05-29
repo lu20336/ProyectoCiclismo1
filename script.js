@@ -31,59 +31,62 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
-    // Manejo de autenticación
-    authButton.addEventListener("click", function () ){
-        const email = document.getElementById("email").value;
-        const password = document.getElementById("password").value;
+authButton.addEventListener("click", function () {
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
 
-        if (!email || !password) {
-            alert("Todos los campos son obligatorios.");
-            return;
-        }
+    if (!email || !password) {
+        alert("Todos los campos son obligatorios.");
+        return;
+    }
 
-        if (isRegistering) {
-            // Registro de usuario
-            const nombreCompleto = document.getElementById("nombreCompleto").value;
-            const telefono = document.getElementById("telefono").value;
-            const ciudad = document.getElementById("ciudad").value;
+    if (isRegistering) {
+        registrar(email, password);
+    } else {
+        iniciarSesion(email, password);
+    }
+});
 
-            if (!nombreCompleto || !telefono || !ciudad) {
-                alert("Todos los campos son obligatorios para registrarte.");
-                return;
-            }
+function registrar(email, password) {
+    const nombreCompleto = document.getElementById("nombreCompleto").value;
+    const telefono = document.getElementById("telefono").value;
+    const ciudad = document.getElementById("ciudad").value;
 
-            const userData = {
-                email,
-                password,
-                nombreCompleto,
-                telefono,
-                ciudad,
-                equipos: [] // 👈 Aquí se guarda espacio para los equipos
-            };
-            localStorage.setItem(email, JSON.stringify(userData));
-            
-            alert("Registro exitoso. Ahora puedes iniciar sesión.");
+    if (!nombreCompleto || !telefono || !ciudad) {
+        alert("Todos los campos son obligatorios para registrarte.");
+        return;
+    }
+
+    const userData = {
+        email: email,
+        password: password,
+        nombreCompleto: nombreCompleto,
+        telefono: telefono,
+        ciudad: ciudad,
+        equipos: []
+    };
+    localStorage.setItem(email, JSON.stringify(userData));
+    alert("Registro exitoso. Ahora puedes iniciar sesión.");
     toggleAuth.click();
 }
 
+function iniciarSesion(email, password) {
+    const storedUser = localStorage.getItem(email);
+    if (storedUser) {
+        const user = JSON.parse(storedUser);
+        if (user.password === password) {
+            alert("Inicio de sesión exitoso.");
+            localStorage.setItem("loggedInUser", email);
+            authContainer.style.display = "none";
+            updateUI();
         } else {
-            // Inicio de sesión
-            const storedUser = localStorage.getItem(email);
-            if (storedUser) {
-                const user = JSON.parse(storedUser);
-                if (user.password === password) {
-                    alert("Inicio de sesión exitoso.");
-                    localStorage.setItem("loggedInUser", email);
-                    authContainer.style.display = "none";
-                    updateUI();
-                } else {
-                    alert("Contraseña incorrecta.");
-                }
-            } else {
-                alert("Usuario no registrado.");
-            }
+            alert("Contraseña incorrecta.");
         }
-    });
+    } else {
+        alert("Usuario no registrado.");
+    }
+}
+
 
     // Cerrar sesión
     logoutButton.addEventListener("click", function () {
