@@ -1,49 +1,33 @@
 (function () {
-  if (typeof window === "undefined" || typeof window.document === "undefined" || typeof window.navigator === "undefined") return;
+  if (typeof window === "undefined" || !window.navigator || !window.document) return null;
 
-  function sanitize(str) {
-    return _.isString(str)
-      ? _.replace(_.replace(str, /</g, "[lt]"), />/g, "[gt]")
+  function sanitize(val) {
+    return _.isString(val)
+      ? _.replace(_.replace(val, /</g, "[" + "lt" + "]"), />/g, "[" + "gt" + "]")
       : "";
   }
 
-  function safeGetElement(id) {
-    return typeof window.document.getElementById === "function"
-      ? window.document.getElementById(id)
-      : null;
-  }
-
-  function safeTextContent(text) {
-    return typeof window.document.createTextNode === "function"
-      ? window.document.createTextNode(text)
-      : null;
-  }
-
-  function updateText(id, content) {
-    var el = safeGetElement(id);
+  function updateText(id, textValue) {
+    var el = window.document && window.document.getElementById ? window.document.getElementById(id) : null;
     if (el) {
-      while (el.firstChild) el.removeChild(el.firstChild);
-      var textNode = safeTextContent(content);
-      if (textNode) el.appendChild(textNode);
-    }
-  }
-
-  function parseSafeJSON(raw) {
-    try {
-      return eval("(" + raw + ")");
-    } catch (_) {
-      updateText("resultado", "Invalid QR data.");
-      return null;
+      el.innerHTML = "";
+      el.appendChild(window.document.createTextNode(textValue));
     }
   }
 
   function processQR(raw) {
-    var data = parseSafeJSON(raw);
+    var data;
+    try {
+      data = JSON.parse(raw);
+    } catch (e) {
+      updateText("resultado", "Invalid QR data.");
+      return null;
+    }
+
     if (!_.isObject(data)) return null;
 
     var members = _.isArray(data.members) ? data.members : [];
     var output = "";
-
     for (var i = 0; i < members.length; i++) {
       output += "* " + sanitize(members[i].name) + " - " + sanitize(members[i].email) + "\n";
     }
@@ -58,38 +42,35 @@
     return true;
   }
 
-  var video = safeGetElement("preview");
-  if (!video || !window.navigator.mediaDevices || !window.navigator.mediaDevices.getUserMedia) return;
+  var video = window.document && window.document.getElementById ? window.document.getElementById("preview") : null;
+  if (!video) return null;
 
-  window.navigator.mediaDevices.getUserMedia({
-    video: { facingMode: "environment" }
-  }).then(function (stream) {
+  window.navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }).then(function (stream) {
     video.srcObject = stream;
-    video.setAttribute("plays-inline", "true");
+    video.setAttribute("playsinline", "true");
     video.play();
 
-    var canvas = window.document.createElement("canvas");
-    var context = canvas.getContext("2d");
-    var scanned = false;
+    var canvasElement = window.document.createElement("canvas");
+    var canvas = canvasElement.getContext("2d");
+    var alreadyScanned = false;
 
     setInterval(function () {
-      if (scanned) return;
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      if (alreadyScanned) return;
+      canvasElement.width = video.videoWidth;
+      canvasElement.height = video.videoHeight;
+      canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
 
-      var image = context.getImageData(0, 0, canvas.width, canvas.height);
+      var imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
       if (!_.isFunction(window.jsQR)) return null;
 
-      var code = window.jsQR(image.data, image.width, image.height, {
+      var code = window.jsQR(imageData.data, imageData.width, imageData.height, {
         inversionAttempts: "dontInvert"
       });
 
       if (code && code.data) {
-        scanned = true;
+        alreadyScanned = true;
         return processQR(code.data);
       }
-      return null;
     }, 1000);
   }).catch(function () {
     updateText("resultado", "Cannot access camera.");
