@@ -1,51 +1,34 @@
 (function () {
-  if (typeof navigator === "undefined" || typeof document === "undefined") return;
+  if (typeof navigator === "undefined" || typeof document === "undefined") return null;
 
-  var video = document.getElementById("preview");
-  if (!video) return;
+  function sanitize(val) {
+    return typeof val === "string" ? val.replace(/</g, "&lt;").replace(/>/g, "&gt;") : "";
+  }
 
-  navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }).then(function (stream) {
-    video.srcObject = stream;
-    video.setAttribute("playsInline", "true");
-    video.play();
+  function updateText(id, txt) {
+    var el = document.getElementById(id);
+    if (el) {
+      el.innerText = "";
+      el.appendChild(document.createTextNode(txt));
+    }
+  }
 
-    var canvasElement = document.createElement("canvas");
-    var canvas = canvasElement.getContext("2d");
-    var scanned = false;
-
-    setInterval(function () {
-      if (scanned) return;
-      canvasElement.width = video.videoWidth;
-      canvasElement.height = video.videoHeight;
-      canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
-
-      if (typeof window.jsQR !== "function") return;
-
-      var imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
-      var code = window.jsQR(imageData.data, imageData.width, imageData.height, {
-        inversionAttempts: "none"
-      });
-
-      if (code && code.data) {
-        scanned = true;
-        return processQR(code.data); // ✅ then() now returns
-      }
-    }, 1000);
-  }).catch(function () {
-    return updateText("resultado", "Cannot access camera.");
-  });
+  function isFunction(fn) {
+    return !!fn && Object.prototype.toString.call(fn) === "[object Function]";
+  }
 
   function processQR(raw) {
     var data;
     try {
       data = JSON.parse(raw);
     } catch (e) {
-      return updateText("resultado", "Invalid QR data.");
+      updateText("resultado", "Invalid QR data.");
+      return null;
     }
 
-    if (!data || typeof data !== "object") return;
+    if (!data || typeof data !== "object") return null;
 
-    var members = Array.isArray(data.members) ? data.members : [];
+    var members = Object.prototype.toString.call(data.members) === "[object Array]" ? data.members : [];
     var parts = [];
     for (var i = 0; i < members.length; i++) {
       var m = members[i];
@@ -61,17 +44,46 @@
 
     updateText("resultado", "QR read successfully.");
     updateText("infoEquipo", output);
+    return null;
   }
 
-  function sanitize(val) {
-    return typeof val === "string" ? val.replace(/</g, "&lt;").replace(/>/g, "&gt;") : "";
-  }
+  try {
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }).then(function (stream) {
+      var video = document.getElementById("preview");
+      if (!video) return null;
+      video.srcObject = stream;
+      video.setAttribute("playsinline", "true");
+      video.play();
 
-  function updateText(id, txt) {
-    var el = document.getElementById(id);
-    if (el) {
-      el.innerText = "";
-      el.appendChild(document.createTextNode(txt));
-    }
+      var canvasElement = document.createElement("canvas");
+      var canvas = canvasElement.getContext("2d");
+      var scanned = false;
+
+      setInterval(function () {
+        if (scanned) return null;
+        canvasElement.width = video.videoWidth;
+        canvasElement.height = video.videoHeight;
+        canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
+
+        if (!isFunction(window.jsQR)) return null;
+
+        var imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
+        var code = window.jsQR(imageData.data, imageData.width, imageData.height, {
+          inversionAttempts: "dontInvert"
+        });
+
+        if (code && code.data) {
+          scanned = true;
+          return processQR(code.data);
+        }
+
+        return null;
+      }, 1000);
+      return null;
+    }).catch(function () {
+      updateText("resultado", "Cannot access camera.");
+    });
+  } catch (e) {
+    updateText("resultado", "Camera access failed.");
   }
 })();
