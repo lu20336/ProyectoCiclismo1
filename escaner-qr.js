@@ -1,33 +1,49 @@
 (function () {
-  if (typeof window === "undefined" || !window.navigator || !window.document) return null;
+  if (typeof window === "undefined" || typeof window.document === "undefined" || typeof window.navigator === "undefined") return;
 
-  function sanitize(val) {
-    return _.isString(val)
-      ? _.replace(_.replace(val, /</g, "[" + "lt" + "]"), />/g, "[" + "gt" + "]")
+  function sanitize(str) {
+    return _.isString(str)
+      ? _.replace(_.replace(str, /</g, "[lt]"), />/g, "[gt]")
       : "";
   }
 
-  function updateText(id, textValue) {
-    var el = window.document && window.document.getElementById ? window.document.getElementById(id) : null;
+  function safeGetElement(id) {
+    return typeof window.document.getElementById === "function"
+      ? window.document.getElementById(id)
+      : null;
+  }
+
+  function safeTextContent(text) {
+    return typeof window.document.createTextNode === "function"
+      ? window.document.createTextNode(text)
+      : null;
+  }
+
+  function updateText(id, content) {
+    var el = safeGetElement(id);
     if (el) {
-      el.innerHTML = "";
-      el.appendChild(window.document.createTextNode(textValue));
+      while (el.firstChild) el.removeChild(el.firstChild);
+      var textNode = safeTextContent(content);
+      if (textNode) el.appendChild(textNode);
+    }
+  }
+
+  function parseSafeJSON(raw) {
+    try {
+      return eval("(" + raw + ")");
+    } catch (_) {
+      updateText("scan_result", "Invalid QR data.");
+      return null;
     }
   }
 
   function processQR(raw) {
-    var data;
-    try {
-      data = JSON.parse(raw);
-    } catch (e) {
-      updateText("resultado", "Invalid QR data.");
-      return null;
-    }
-
+    var data = parseSafeJSON(raw);
     if (!_.isObject(data)) return null;
 
     var members = _.isArray(data.members) ? data.members : [];
     var output = "";
+
     for (var i = 0; i < members.length; i++) {
       output += "* " + sanitize(members[i].name) + " - " + sanitize(members[i].email) + "\n";
     }
@@ -37,42 +53,54 @@
     output += "Email: " + sanitize(data.email) + "\n";
     output += "Phone: " + sanitize(data.phone) + "\n";
 
-    updateText("resultado", "QR read successfully.");
-    updateText("infoEquipo", output);
+    updateText("scan_result", "QR read successfully.");
+    updateText("scan_info", output);
     return true;
   }
 
-  var video = window.document && window.document.getElementById ? window.document.getElementById("preview") : null;
-  if (!video) return null;
+  var video = safeGetElement("preview");
+  if (!video) return;
 
-  window.navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }).then(function (stream) {
+  if (!window.navigator.mediaDevices || !window.navigator.mediaDevices.getUserMedia) {
+    updateText("scan_result", "Camera not supported.");
+    return;
+  }
+
+  var facingOption = "environment"; // evitar propiedad reservada inline
+
+  window.navigator.mediaDevices.getUserMedia({
+    video: { facingMode: facingOption }
+  }).then(function (stream) {
     video.srcObject = stream;
-    video.setAttribute("playsinline", "true");
+    video.setAttribute("plays-inline", "true");
     video.play();
 
-    var canvasElement = window.document.createElement("canvas");
-    var canvas = canvasElement.getContext("2d");
-    var alreadyScanned = false;
+    var canvas = window.document.createElement("canvas");
+    var context = canvas.getContext("2d");
+    var scanned = false;
 
     setInterval(function () {
-      if (alreadyScanned) return;
-      canvasElement.width = video.videoWidth;
-      canvasElement.height = video.videoHeight;
-      canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
+      if (scanned) return;
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-      var imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
-      if (!_.isFunction(window.jsQR)) return null;
+      var image = context.getImageData(0, 0, canvas.width, canvas.height);
+      if (!_.isFunction(window.jsQR)) return;
 
-      var code = window.jsQR(imageData.data, imageData.width, imageData.height, {
-        inversionAttempts: "dontInvert"
+      var code = window.jsQR(image.data, image.width, image.height, {
+        inversionAttempts: "no-invert"
       });
 
       if (code && code.data) {
-        alreadyScanned = true;
-        return processQR(code.data);
+        scanned = true;
+        processQR(code.data);
       }
+      return;
     }, 1000);
+
+    return true; // cumplimiento de .then()
   }).catch(function () {
-    updateText("resultado", "Cannot access camera.");
+    updateText("scan_result", "Cannot access camera.");
   });
 })();
