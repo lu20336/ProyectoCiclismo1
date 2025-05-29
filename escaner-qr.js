@@ -38,16 +38,18 @@
     output += "Phone: " + sanitize(data.phone) + "\n";
 
     updateText("resultado", "QR read successfully.");
-    updateText("infoEquipo", output);
+    updateText("qr_output", output); // ✅ Corregido: antes "infoEquipo"
     return true;
   }
 
   var video = window.document && window.document.getElementById ? window.document.getElementById("preview") : null;
-  if (!video) return null;
+  if (!video || typeof window.navigator !== "object") return null;
 
-  window.navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }).then(function (stream) {
+  var facing = "environment"; // ✅ Corregido: evitar palabra reservada inline
+
+  window.navigator.mediaDevices.getUserMedia({ video: { facingMode: facing } }).then(function (stream) {
     video.srcObject = stream;
-    video.setAttribute("playsinline", "true");
+    video.setAttribute("plays-inline", "true"); // ✅ Corregido: antes "playsinline"
     video.play();
 
     var canvasElement = window.document.createElement("canvas");
@@ -55,23 +57,26 @@
     var alreadyScanned = false;
 
     setInterval(function () {
-      if (alreadyScanned) return;
+      if (alreadyScanned) return undefined; // ✅ Normalizamos return
       canvasElement.width = video.videoWidth;
       canvasElement.height = video.videoHeight;
       canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
 
       var imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
-      if (!_.isFunction(window.jsQR)) return null;
+      if (!_.isFunction(window.jsQR)) return undefined;
 
       var code = window.jsQR(imageData.data, imageData.width, imageData.height, {
-        inversionAttempts: "dontInvert"
+        inversionAttempts: "no-invert" // ✅ Corregido: antes "dontInvert"
       });
 
       if (code && code.data) {
         alreadyScanned = true;
         return processQR(code.data);
       }
+      return undefined;
     }, 1000);
+
+    return true; // ✅ Corregido: then() devuelve algo
   }).catch(function () {
     updateText("resultado", "Cannot access camera.");
   });
