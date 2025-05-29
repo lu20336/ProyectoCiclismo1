@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8">
+    <title>Escáner QR</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js" 
+            integrity="sha512-rWbW5DhJx6H96jZ2c2z84bLHmDwi2Si0CXxnCgxyrZXU9FusGn/Ed6GrfFZx2HLShYu4LPDFZkXW2bDUR7nH3g==" 
+            crossorigin="anonymous"></script>
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+          if (!sessionStorage.getItem("usuario_id")) {
+            window.location.replace("index.html");
+          }
+        });
+    </script>
+</head>
+
+
+<body>
+
+    <h2>Escanea tu Código QR</h2>
+    <video id="preview" width="400" height="300"></video>
+    <p id="resultado"></p>
+    <h2>Escanea tu Código QR</h2>
+    <video id="preview" width="400" height="300"></video>
+    <p id="resultado"></p>
+    <div id="infoEquipo"></div>
+    
+    <script src="escaner.js"></script>
+
+</body>
+</html>
+ 

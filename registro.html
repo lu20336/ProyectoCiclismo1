@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <script>
+if (!usuarioId) {
+  alert("Debes iniciar sesión primero.");
+  redirigirAlLogin();
+}
+
+function redirigirAlLogin() {
+  window.location.href = "index.html";
+}
+
+  </script>
+  
+  <meta charset="UTF-8">
+  <title>Registro de Equipos Dinámico</title>
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      if (!sessionStorage.getItem("usuario_id")) {
+        window.location.replace("index.html");
+      }
+    });
+  </script>
+  
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .eliminar-btn {
+      background-color: #ff4d4d;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      margin-top: 10px;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+    .eliminar-btn:hover {
+      background-color: #e60000;
+    }
+  </style>
+</head>
+<body class="registro">
+
+  <nav class="header-nav">
+    <ul>
+      <li><a href="index.html">Inicio</a></li>
+      <li><a href="registro.html">Registro</a></li>
+      <li><a href="informacion.html">Inscripciones</a></li>
+      <li><button type="button" onclick="history.back()">Retroceder</button></li>
+      <li><button type="button" onclick="cerrarSesion()">Cerrar Sesión</button></li>
+    </ul>
+  </nav>
+
+  <div class="registro-container">
+    <h2>Registro de Equipos</h2>
+    <form id="registroForm">
+      <label for="nombreEquipo">Nombre del Equipo:</label>
+      <input type="text" id="nombreEquipo" required>
+
+      <label for="nombreManager">Nombre del Manager:</label>
+      <input type="text" id="nombreManager" required>
+
+      <label for="email">Email del Manager:</label>
+      <input type="email" id="email" required>
+
+      <label for="telefono">Teléfono del Manager:</label>
+      <input type="tel" id="telefono" required>
+
+      <h3>Miembros del Equipo</h3>
+      <div id="miembrosContainer"></div>
+      <button type="button" id="btnAgregarMiembro">➕ Agregar Miembro</button>
+      <br><br>
+
+      <button type="button" id="generarQR">📷 Generar Código QR</button>
+      <div id="qrCode" style="margin-top: 10px;"></div>
+      <br>
+
+      <button type="button" id="registrarEquipo">Registrar Equipo</button>
+    </form>
+  </div>
+
+  <div class="equipos-container">
+    <h3>Mis Equipos</h3>
+    <ul id="listaEquipos"></ul>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"
+        integrity="sha512-W8IHnAopLHDl07MfwTb7+dW1L+I7eZK0YXvQsmPTOyrYrFeMZkPY07A4MdIY4zBOqgyRx7VfPvZ2n9UUumZ/8w=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+  <script>
+ function cerrarSesion() {
+  sessionStorage.clear();
+  window.location.replace("index.html"); 
+}
+
+  </script>
+
+  <script>
+  (function () {
+    const usuarioId = sessionStorage.getItem("usuario_id");
+    if (!usuarioId) {
+  window.location.href = "index.html";
+  return;
+}
+
+
+    let miembroCount = 0, miembros = [];
+
+    document.getElementById("btnAgregarMiembro").addEventListener("click", () => {
+      if (miembros.filter(m => m).length >= 5) return alert("Máximo 5 miembros.");
+      const idx = miembroCount++;
+      const div = document.createElement("div");
+      div.innerHTML = `
+        <label>Miembro ${idx + 1}:</label>
+        <input type="text" class="memberName" placeholder="Nombre" required>
+        <input type="email" class="memberEmail" placeholder="Email" required>
+        <input type="tel" class="memberPhone" placeholder="Teléfono" required>
+        <button type="button" class="btnEliminar">Eliminar</button>
+        <hr>
+      `;
+      document.getElementById("miembrosContainer").appendChild(div);
+      miembros[idx] = div;
+      div.querySelector(".btnEliminar").onclick = () => {
+        div.remove(); miembros[idx] = null;
+      };
+    });
+
+    async function fetchTeams() {
+      const res = await fetch(`getTeams.php?usuario_id=${usuarioId}`);
+      return res.ok ? res.json() : [];
+    }
+
+    async function saveTeam(data) {
+      const res = await fetch("addTeam.php", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+      return res.json();
+    }
+
+ 
+    document.getElementById("generarQR").addEventListener("click", () => {
+      const nombreEquipo = document.getElementById("nombreEquipo").value.trim();
+      if (!nombreEquipo) {
+        return alert("⚠️ El nombre del equipo es obligatorio para generar el código QR.");
+      }
+
+ 
+    });
+
+    document.getElementById("registrarEquipo").addEventListener("click", async () => {
+      const nombreEquipo = document.getElementById("nombreEquipo").value.trim();
+      const nombreManager = document.getElementById("nombreManager").value.trim();
+      const email = document.getElementById("email").value.trim();
+      const telefono = document.getElementById("telefono").value.trim();
+
+      if (!nombreEquipo || !nombreManager || !email || !telefono) {
+        return alert("⚠️ Completa todos los campos del equipo.");
+      }
+
+      const emailValido =(!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(m.email))
+      if (!emailValido) return alert("⚠️ El email del manager no es válido.");
+
+      const telValido = /^\d{7,}$/.test(telefono);
+      if (!telValido) return alert("⚠️ El teléfono debe tener al menos 7 dígitos numéricos.");
+
+      const miembrosValidos = miembros.filter(m => m).map(div => {
+        const [n, e, t] = div.querySelectorAll("input");
+        return {
+          nombre: n.value.trim(),
+          email: e.value.trim(),
+          telefono: t.value.trim()
+        };
+      });
+
+      if (!miembrosValidos.length) return alert("⚠️ Agrega al menos un miembro.");
+
+      for (const m of miembrosValidos) {
+        if (!m.nombre || !m.email || !m.telefono) return alert("⚠️ Todos los campos de los miembros son obligatorios.");
+        if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(m.email)) return alert(`⚠️ Email inválido en miembro: ${m.nombre}`);
+        if (!/^\d{7,}$/.test(m.telefono)) return alert(`⚠️ Teléfono inválido en miembro: ${m.nombre}`);
+      }
+
+      const payload = {
+        usuario_id: +usuarioId,
+        nombreEquipo,
+        nombreManager,
+        email,
+        telefono,
+        miembros: miembrosValidos
+      };
+
+      const result = await saveTeam(payload);
+      if (result.success) {
+        alert("✅ Equipo registrado.");
+        document.getElementById("registroForm").reset();
+        document.getElementById("miembrosContainer").innerHTML = "";
+        document.getElementById("qrCode").innerHTML = "";
+        miembros = []; miembroCount = 0;
+        renderizar();
+      } else alert(result.error || "❌ Error al registrar equipo.");
+    });
+
+
+    async function renderizar() {
+      const lista = document.getElementById("listaEquipos");
+      lista.innerHTML = "";
+      const equipos = await fetchTeams();
+      if (!equipos.length) {
+  lista.innerHTML = "<li>No tienes equipos aún.</li>";
+  return;
+}
+
+
+      equipos.forEach(e => {
+        const li = document.createElement("li");
+        const ms = Array.isArray(e.miembros) ? e.miembros : JSON.parse(e.miembros || '[]');
+        li.innerHTML = `
+          <div class="equipo-card">
+            <h3 class="equipo-nombre">${e.nombre || 'Sin nombre'}</h3>
+            <p><strong>Manager:</strong> ${e.manager || 'N/D'}</p>
+            <p><strong>Email:</strong> ${e.email || 'N/D'}</p>
+            <p><strong>Teléfono:</strong> ${e.telefono || 'N/D'}</p>
+            <p><strong>Miembros:</strong></p>
+            <ul>
+              ${ms.map(m => `<li>• ${m.nombre}, ${m.email}, ${m.telefono}</li>`).join('')}
+            </ul>
+            <button class="eliminar-btn" data-id="${e.id}"> Eliminar</button>
+          </div>
+        `;
+        lista.appendChild(li);
+      });
+
+      document.querySelectorAll(".eliminar-btn").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          if (!confirm("¿Seguro que deseas eliminar este equipo?")) return;
+          const equipoId = btn.dataset.id;
+
+          const res = await fetch("deleteTeam.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ equipo_id: equipoId })
+          });
+
+          const json = await res.json();
+          if (json.success) {
+            alert("✅ Equipo eliminado correctamente.");
+            renderizar();
+          } else {
+            alert("❌ Error al eliminar el equipo.");
+          }
+        });
+      });
+    }
+
+    renderizar();
+  })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Iniciar Sesión / Registro</title>
+  <link rel="stylesheet" href="styles.css" />
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+</head>
+
+<body class="login" onpageshow="if (performance.navigation.type === 2) location.reload();">
+  <div class="login-container">
+    <h2 id="formTitle">Iniciar Sesión</h2>
+
+    <form id="authForm" autocomplete="off" action="javascript:void(0);">
+      <input type="email" id="email" name="email" placeholder="Correo electrónico" required />
+      <input type="password" id="password" name="password" placeholder="Contraseña" required />
+
+      <div id="extraFields" style="display: none;">
+        <input type="text" id="nombreCompleto" name="nombreCompleto" placeholder="Nombre completo" />
+        <input type="tel" id="telefono" name="telefono" placeholder="Teléfono" />
+        <input type="text" id="ciudad" name="ciudad" placeholder="Ciudad" />
+      </div>
+
+      <button type="submit" id="authButton">Iniciar Sesión</button>
+    </form>
+    <p><a href="#" id="toggleAuth">¿No tienes cuenta? Regístrate aquí</a></p>
+  </div>
+
+  <script>
+    let isRegister = false;
+
+    document.addEventListener("DOMContentLoaded", () => {
+      sessionStorage.clear();
+      document.getElementById("email").value = "";
+      document.getElementById("password").value = "";
+
+      const toggleAuth = document.getElementById("toggleAuth");
+      const formTitle = document.getElementById("formTitle");
+      const extraFields = document.getElementById("extraFields");
+      const authButton = document.getElementById("authButton");
+
+      toggleAuth.addEventListener("click", (e) => {
+        e.preventDefault();
+        isRegister = !isRegister;
+
+        formTitle.textContent = isRegister ? "Registro de Usuario" : "Iniciar Sesión";
+        authButton.textContent = isRegister ? "Registrarse" : "Iniciar Sesión";
+        extraFields.style.display = isRegister ? "block" : "none";
+      });
+
+      document.getElementById("authForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const email = document.getElementById("email").value.trim();
+        const password = document.getElementById("password").value.trim();
+
+        if (!validarCredenciales(email, password)) return;
+
+        if (isRegister) {
+          const nombre = document.getElementById("nombreCompleto").value.trim();
+          const telefono = document.getElementById("telefono").value.trim();
+          const ciudad = document.getElementById("ciudad").value.trim();
+
+          if (!validarRegistro(nombre, telefono, ciudad)) return;
+          await registrarUsuario(email, password, nombre, telefono, ciudad);
+        } else {
+          await iniciarSesion(email, password);
+        }
+      });
+    });
+
+    function validarCredenciales(email, password) {
+      if (!email || !password) {
+        alert("⚠️ Completa los campos obligatorios.");
+        return false;
+      }
+
+      const regexSeguro = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      if (!regexSeguro.test(email)) {
+        alert("⚠️ El correo no es válido.");
+        return false;
+      }
+
+      return true;
+    }
+
+    function validarRegistro(nombre, telefono, ciudad) {
+      if (!nombre || !telefono || !ciudad) {
+        alert("⚠️ Completa todos los campos de registro.");
+        return false;
+      }
+
+      if (!/^\d{7,}$/.test(telefono)) {
+        alert("⚠️ El teléfono debe tener al menos 7 dígitos.");
+        return false;
+      }
+
+      return true;
+    }
+
+    async function registrarUsuario(email, password, nombre, telefono, ciudad) {
+      try {
+        const res = await fetch("register.php", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password, nombreCompleto: nombre, telefono, ciudad })
+        });
+
+        const json = await res.json();
+        if (res.ok && json.success) {
+          alert("✅ Registro exitoso. Ahora inicia sesión.");
+          document.getElementById("toggleAuth").click();
+        } else {
+          alert(json.error || "❌ Error al registrar.");
+        }
+      } catch (err) {
+        console.error("Error al registrar:", err);
+        alert("❌ Error de conexión al registrar.");
+      }
+    }
+
+    async function iniciarSesion(email, password) {
+      try {
+        const res = await fetch("login.php", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password })
+        });
+
+        const json = await res.json();
+        if (res.ok && json.usuario_id) {
+          sessionStorage.setItem("usuario_id", json.usuario_id);
+          window.location.replace("registro.html");
+        } else {
+          alert(json.error || "❌ Usuario no encontrado o credenciales incorrectas.");
+        }
+      } catch (err) {
+        console.error("Error al iniciar sesión:", err);
+        alert("❌ Error de conexión al iniciar sesión.");
+      }
+    }
+  </script>
+</body>
+</html>

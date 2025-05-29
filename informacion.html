@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Inscripciones</title>
+  <link rel="stylesheet" href="styles.css">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      if (!sessionStorage.getItem("usuario_id")) {
+        window.location.replace("index.html");
+      }
+      window.history.pushState(null, null, window.location.href);
+      window.onpopstate = function () {
+        window.location.replace("index.html");
+      };
+    });
+  </script>
+</head>
+
+<body class="registro">
+  <nav class="header-nav">
+    <ul>
+      <li><a href="index.html">Inicio</a></li>
+      <li><a href="registro.html">Registro</a></li>
+      <li><a href="informacion.html">Inscripciones</a></li>
+      <li><button type="button" onclick="history.back()">Retroceder</button></li>
+      <li><button type="button" onclick="cerrarSesion()">Cerrar Sesión</button></li>
+      
+    </ul>
+  </nav>
+
+  <div class="registro-container">
+    <h2>Equipos Inscritos</h2>
+    <ul id="listaEquipos"></ul>
+  </div>
+
+  <script>
+    function cerrarSesion() {
+      sessionStorage.clear();
+      window.location.href = "index.html";
+    }
+
+    async function mostrarEquipos() {
+      const lista = document.getElementById("listaEquipos");
+      lista.innerHTML = '<li>Cargando…</li>';
+
+      const userId = sessionStorage.getItem("usuario_id");
+      if (!userId) {
+        lista.innerHTML = '<li>Error: no has iniciado sesión.</li>';
+        return;
+      }
+
+      try {
+        const res = await fetch(`getTeams.php?usuario_id=${userId}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        const equipos = await res.json();
+        if (!Array.isArray(equipos) || equipos.length === 0) {
+          lista.innerHTML = '<li>No hay equipos registrados aún.</li>';
+          return;
+        }
+
+        lista.innerHTML = '';
+        equipos.forEach(e => {
+          let miembros = [];
+          if (typeof e.miembros === 'string') {
+            try {
+              miembros = JSON.parse(e.miembros);
+            } catch {
+              miembros = [];
+            }
+          }
+
+          const li = document.createElement('li');
+          li.innerHTML = `
+            <strong>${e.nombre}</strong><br>
+            <strong>Manager:</strong> ${e.manager}<br>
+            <strong>Email:</strong> ${e.email}<br>
+            <strong>Teléfono:</strong> ${e.telefono || 'N/A'}<br>
+            <strong>Miembros:</strong><br>
+            ${
+              miembros.length
+              ? miembros.map(m => `• ${m.nombre}, ${m.email}, ${m.telefono}`).join('<br>')
+              : 'No hay miembros.'
+            }
+            <hr>
+          `;
+          lista.appendChild(li);
+        });
+      } catch (err) {
+        console.error(err);
+        lista.innerHTML = `<li>Error al cargar: ${err.message}</li>`;
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', mostrarEquipos);
+  </script>
+</body>
+</html>
