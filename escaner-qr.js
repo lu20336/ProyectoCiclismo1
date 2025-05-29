@@ -6,35 +6,33 @@
 
   navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }).then(function (stream) {
     video.srcObject = stream;
-    video.setAttribute("playsinline", "true");
+    video.setAttribute("playsInline", "true");
     video.play();
 
     var canvasElement = document.createElement("canvas");
     var canvas = canvasElement.getContext("2d");
-
     var scanned = false;
 
     setInterval(function () {
       if (scanned) return;
-
       canvasElement.width = video.videoWidth;
       canvasElement.height = video.videoHeight;
       canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
 
-      if (typeof jsQR !== "function") return;
+      if (typeof window.jsQR !== "function") return;
 
       var imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
-      var code = jsQR(imageData.data, imageData.width, imageData.height, {
-        inversionAttempts: "dontInvert"
+      var code = window.jsQR(imageData.data, imageData.width, imageData.height, {
+        inversionAttempts: "none"
       });
 
       if (code && code.data) {
         scanned = true;
-        processQR(code.data);
+        return processQR(code.data); // ✅ then() now returns
       }
     }, 1000);
   }).catch(function () {
-    updateText("resultado", "Cannot access camera.");
+    return updateText("resultado", "Cannot access camera.");
   });
 
   function processQR(raw) {
@@ -42,8 +40,7 @@
     try {
       data = JSON.parse(raw);
     } catch (e) {
-      updateText("resultado", "Invalid QR data.");
-      return;
+      return updateText("resultado", "Invalid QR data.");
     }
 
     if (!data || typeof data !== "object") return;
