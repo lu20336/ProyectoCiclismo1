@@ -4,16 +4,16 @@
   <meta charset="UTF-8" />
   <title>Iniciar Sesión / Registro</title>
   <link rel="stylesheet" href="styles.css" />
-  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
-  <meta http-equiv="Pragma" content="no-cache">
-  <meta http-equiv="Expires" content="0">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
 </head>
 
 <body class="login" onpageshow="if (performance.navigation.type === 2) location.reload();">
   <div class="login-container">
     <h2 id="formTitle">Iniciar Sesión</h2>
 
-    <form id="authForm" autocomplete="off" action="javascript:void(0);">
+    <form id="authForm" autocomplete="off" novalidate>
       <input type="email" id="email" name="email" placeholder="Correo electrónico" required />
       <input type="password" id="password" name="password" placeholder="Contraseña" required />
 
@@ -56,14 +56,18 @@
         const email = document.getElementById("email").value.trim();
         const password = document.getElementById("password").value.trim();
 
-        if (!validarCredenciales(email, password)) return;
+        if (!validarCredenciales(email, password)) {
+          return;
+        }
 
         if (isRegister) {
           const nombre = document.getElementById("nombreCompleto").value.trim();
           const telefono = document.getElementById("telefono").value.trim();
           const ciudad = document.getElementById("ciudad").value.trim();
 
-          if (!validarRegistro(nombre, telefono, ciudad)) return;
+          if (!validarRegistro(nombre, telefono, ciudad)) {
+            return;
+          }
           await registrarUsuario(email, password, nombre, telefono, ciudad);
         } else {
           await iniciarSesion(email, password);
@@ -77,7 +81,7 @@
         return false;
       }
 
-      const regexSeguro = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      const regexSeguro = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$/;
       if (!regexSeguro.test(email)) {
         alert("⚠️ El correo no es válido.");
         return false;
@@ -92,7 +96,7 @@
         return false;
       }
 
-      if (!/^\d{7,}$/.test(telefono)) {
+      if (!/^\\d{7,}$/.test(telefono)) {
         alert("⚠️ El teléfono debe tener al menos 7 dígitos.");
         return false;
       }
