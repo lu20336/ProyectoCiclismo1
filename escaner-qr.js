@@ -1,89 +1,78 @@
 (function () {
-  if (typeof window === "undefined" || typeof window.document === "undefined") return;
+  if (typeof window === "undefined" || !window.navigator || !window.document) return null;
 
-  function sanitize(value) {
-    return _.isString(value)
-      ? _.replace(_.replace(value, /</g, "[lt]"), />/g, "[gt]")
+  function sanitize(val) {
+    return _.isString(val)
+      ? _.replace(_.replace(val, /</g, "[" + "lt" + "]"), />/g, "[" + "gt" + "]")
       : "";
   }
 
-  function safeGet(id) {
-    var node = window.document.getElementById(id);
-    return node || null;
-  }
-
-  function writeText(id, msg) {
-    var el = safeGet(id);
+  function updateText(id, textValue) {
+    var el = window.document && window.document.getElementById ? window.document.getElementById(id) : null;
     if (el) {
-      while (el.firstChild) el.removeChild(el.firstChild);
-      el.appendChild(window.document.createTextNode(msg));
+      el.innerHTML = "";
+      el.appendChild(window.document.createTextNode(textValue));
     }
   }
 
-  function parseSafe(raw) {
+  function processQR(raw) {
+    var data;
     try {
-      return JSON.parse(raw);
-    } catch (_) {
-      writeText("resultado", "Invalid QR data.");
+      data = JSON.parse(raw);
+    } catch (e) {
+      updateText("resultado", "Invalid QR data.");
       return null;
     }
-  }
 
-  function showInfo(data) {
-    var text = "";
-    var miembros = _.isArray(data.members) ? data.members : [];
-    for (var i = 0; i < miembros.length; i++) {
-      var m = miembros[i];
-      text += "* " + sanitize(m.name) + " - " + sanitize(m.email) + "\n";
+    if (!_.isObject(data)) return null;
+
+    var members = _.isArray(data.members) ? data.members : [];
+    var output = "";
+    for (var i = 0; i < members.length; i++) {
+      output += "* " + sanitize(members[i].name) + " - " + sanitize(members[i].email) + "\n";
     }
-    text += "Name: " + sanitize(data.teamName) + "\n";
-    text += "Manager: " + sanitize(data.manager) + "\n";
-    text += "Email: " + sanitize(data.email) + "\n";
-    text += "Phone: " + sanitize(data.phone) + "\n";
 
-    writeText("resultado", "QR read successfully.");
-    writeText("infoEquipo", text);
+    output += "Name: " + sanitize(data.teamName) + "\n";
+    output += "Manager: " + sanitize(data.manager) + "\n";
+    output += "Email: " + sanitize(data.email) + "\n";
+    output += "Phone: " + sanitize(data.phone) + "\n";
+
+    updateText("resultado", "QR read successfully.");
+    updateText("infoEquipo", output);
+    return true;
   }
 
-  function process(raw) {
-    var data = parseSafe(raw);
-    if (!_.isObject(data)) return;
-    showInfo(data);
-  }
-
-  var vid = safeGet("preview");
-  if (!vid) return;
-
-  if (!window.navigator || !window.navigator.mediaDevices || !window.navigator.mediaDevices.getUserMedia) {
-    writeText("resultado", "Camera not supported.");
-    return;
-  }
+  var video = window.document && window.document.getElementById ? window.document.getElementById("preview") : null;
+  if (!video) return null;
 
   window.navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }).then(function (stream) {
-    vid.srcObject = stream;
-    vid.setAttribute("playsinline", "true");
-    vid.play();
+    video.srcObject = stream;
+    video.setAttribute("playsinline", "true");
+    video.play();
 
-    var canvasElem = window.document.createElement("canvas");
-    var ctx = canvasElem.getContext("2d");
-    var scanned = false;
+    var canvasElement = window.document.createElement("canvas");
+    var canvas = canvasElement.getContext("2d");
+    var alreadyScanned = false;
 
     setInterval(function () {
-      if (scanned) return;
-      canvasElem.width = vid.videoWidth;
-      canvasElem.height = vid.videoHeight;
-      ctx.drawImage(vid, 0, 0, canvasElem.width, canvasElem.height);
-      var img = ctx.getImageData(0, 0, canvasElem.width, canvasElem.height);
+      if (alreadyScanned) return;
+      canvasElement.width = video.videoWidth;
+      canvasElement.height = video.videoHeight;
+      canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
 
-      if (_.isFunction(window.jsQR)) {
-        var code = window.jsQR(img.data, img.width, img.height, { inversionAttempts: "dontInvert" });
-        if (code && code.data) {
-          scanned = true;
-          process(code.data);
-        }
+      var imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
+      if (!_.isFunction(window.jsQR)) return null;
+
+      var code = window.jsQR(imageData.data, imageData.width, imageData.height, {
+        inversionAttempts: "dontInvert"
+      });
+
+      if (code && code.data) {
+        alreadyScanned = true;
+        return processQR(code.data);
       }
     }, 1000);
   }).catch(function () {
-    writeText("resultado", "Cannot access camera.");
+    updateText("resultado", "Cannot access camera.");
   });
 })();
