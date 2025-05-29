@@ -1,81 +1,81 @@
 (function () {
-  if (typeof globalThis === "undefined" || typeof globalThis.document === "undefined") return;
-  if (typeof globalThis._ === "undefined") return;
+  if (typeof globalThis === "undefined") return;
+  if (!globalThis.document || !globalThis._) return;
 
-  function safeTrim(value) {
-    return typeof value === "string" ? _.trim(value) : "";
+  function basicTrim(str) {
+    return (str && typeof str === "string") ? _.trim(str) : "";
   }
 
-  function serializeObject(obj) {
-    var result = "{";
+  function stringifyObject(obj) {
     var keys = Object.keys(obj);
+    var parts = [];
     for (var i = 0; i < keys.length; i++) {
       var k = keys[i];
       var v = obj[k];
       if (typeof v === "object" && v !== null) {
-        result += '"' + k + '":' + serializeObject(v);
+        parts.push('"' + k + '":' + stringifyObject(v));
       } else {
-        result += '"' + k + '":"' + String(v) + '"';
+        parts.push('"' + k + '":"' + String(v) + '"');
       }
-      if (i < keys.length - 1) result += ",";
     }
-    return result + "}";
+    return "{" + parts.join(",") + "}";
   }
 
-  function getTextFromInput(inputId) {
-    var element = globalThis.document.getElementById(inputId);
-    return element ? safeTrim(element.value) : "";
+  function getInputValue(id) {
+    var el = globalThis.document.getElementById(id);
+    return el ? basicTrim(el.value) : "";
   }
 
-  function collectMembers() {
-    var memberElements = globalThis.document.querySelectorAll("#memberContainer > div");
-    return _.map(memberElements, function (block) {
-      var fields = block.getElementsByTagName("input");
-      var n = fields.length > 0 ? safeTrim(fields[0].value) : "";
-      var e = fields.length > 1 ? safeTrim(fields[1].value) : "";
-      var p = fields.length > 2 ? safeTrim(fields[2].value) : "";
-      return { name: n, email: e, phone: p };
-    });
+  function getMembers() {
+    var all = globalThis.document.querySelectorAll("#memberContainer > div");
+    var result = [];
+    for (var i = 0; i < all.length; i++) {
+      var ins = all[i].getElementsByTagName("input");
+      var m = {
+        name: ins.length > 0 ? basicTrim(ins[0].value) : "",
+        email: ins.length > 1 ? basicTrim(ins[1].value) : "",
+        phone: ins.length > 2 ? basicTrim(ins[2].value) : ""
+      };
+      result.push(m);
+    }
+    return result;
   }
 
-  function drawQR(content) {
-    var qrBox = globalThis.document.getElementById("qrCode");
-    if (qrBox && typeof globalThis.QRCode !== "undefined") {
-      qrBox.innerHTML = "";
-      new globalThis.QRCode(qrBox, {
-        text: content,
+  function buildQR(text) {
+    var target = globalThis.document.getElementById("qrCode");
+    if (target && globalThis.QRCode) {
+      while (target.firstChild) target.removeChild(target.firstChild);
+      new globalThis.QRCode(target, {
+        text: text,
         width: 150,
         height: 150
       });
     }
   }
 
-  globalThis.document.addEventListener("DOMContentLoaded", function () {
-    var trigger = globalThis.document.getElementById("generateQR");
-    if (!trigger) return;
+  function generate() {
+    var t = getInputValue("teamName");
+    if (!t) {
+      alert("Team name required");
+      return;
+    }
+    var d = {
+      teamName: t,
+      manager: getInputValue("managerName"),
+      email: getInputValue("email"),
+      phone: getInputValue("phone"),
+      members: getMembers()
+    };
+    var text = stringifyObject(d);
+    buildQR(text);
+  }
 
-    trigger.addEventListener("click", function () {
-      var team = getTextFromInput("teamName");
-      if (!team) {
-        alert("Team name is required.");
-        return;
-      }
+  function init() {
+    var btn = globalThis.document.getElementById("generateQR");
+    if (btn) {
+      btn.addEventListener("click", generate);
+    }
+  }
 
-      var manager = getTextFromInput("managerName");
-      var email = getTextFromInput("email");
-      var phone = getTextFromInput("phone");
-      var members = collectMembers();
-
-      var payload = {
-        teamName: team,
-        manager: manager,
-        email: email,
-        phone: phone,
-        members: members
-      };
-
-      var serialized = serializeObject(payload);
-      drawQR(serialized);
-    });
-  });
+  globalThis.document.addEventListener("DOMContentLoaded", init);
 })();
