@@ -1,63 +1,72 @@
 (function () {
-  if (typeof document === "undefined") return;
-  if (typeof _ === "undefined") return;
+  if (typeof globalThis === "undefined") return;
+  if (!globalThis.document || !globalThis._) return;
 
-  function getTrimmedValue(id) {
-    var el = document.getElementById(id);
-    return el ? _.trim(el.value) : "";
+  function safeTrim(str) {
+    return typeof str === "string" ? _.trim(str) : "";
   }
 
-  function extractMembers() {
-    var divs = document.querySelectorAll("#memberContainer > div");
-    return _.map(divs, function (div) {
-      var inputs = div.getElementsByTagName("input");
-      var name = inputs.length > 0 ? _.trim(inputs[0].value) : "";
-      var email = inputs.length > 1 ? _.trim(inputs[1].value) : "";
-      var phone = inputs.length > 2 ? _.trim(inputs[2].value) : "";
-      return {
-        name: name,
-        email: email,
-        phone: phone
-      };
-    });
+  function serialize(obj) {
+    var result = "{";
+    var keys = Object.keys(obj);
+    for (var i = 0; i < keys.length; i++) {
+      var key = keys[i];
+      var val = obj[key];
+      if (typeof val === "object" && val !== null) {
+        result += '"' + key + '":' + serialize(val);
+      } else {
+        result += '"' + key + '":"' + String(val) + '"';
+      }
+      if (i < keys.length - 1) result += ",";
+    }
+    return result + "}";
   }
 
-  function generateQRCode(data) {
-    var container = document.getElementById("qrCode");
-    if (container && typeof QRCode !== "undefined") {
-      container.innerHTML = "";
-      new QRCode(container, {
-        text: JSON.stringify(data),
+  function getValue(id) {
+    var input = globalThis.document.getElementById(id);
+    return input ? safeTrim(input.value) : "";
+  }
+
+  function collect() {
+    var blocks = globalThis.document.querySelectorAll("#memberContainer > div");
+    var out = [];
+    for (var i = 0; i < blocks.length; i++) {
+      var inputs = blocks[i].getElementsByTagName("input");
+      var n = inputs.length > 0 ? safeTrim(inputs[0].value) : "";
+      var e = inputs.length > 1 ? safeTrim(inputs[1].value) : "";
+      var p = inputs.length > 2 ? safeTrim(inputs[2].value) : "";
+      out.push({ name: n, email: e, phone: p });
+    }
+    return out;
+  }
+
+  function showQR(txt) {
+    var target = globalThis.document.getElementById("qrCode");
+    if (target && typeof globalThis.QRCode !== "undefined") {
+      while (target.firstChild) {
+        target.removeChild(target.firstChild);
+      }
+      new globalThis.QRCode(target, {
+        text: txt,
         width: 150,
         height: 150
       });
     }
   }
 
-  document.addEventListener("DOMContentLoaded", function () {
-    var button = document.getElementById("generateQR");
-    if (!button) return;
+  function ready() {
+    var btn = globalThis.document.getElementById("generateQR");
+    if (!btn) return;
 
-    button.addEventListener("click", function () {
-      var teamName = getTrimmedValue("teamName");
-      var manager = getTrimmedValue("managerName");
-      var email = getTrimmedValue("email");
-      var phone = getTrimmedValue("phone");
-
-      if (!teamName) {
+    btn.addEventListener("click", function () {
+      var t = getValue("teamName");
+      if (!t) {
         alert("Team name is required.");
         return;
       }
 
-      var data = {
-        teamName: teamName,
-        manager: manager,
-        email: email,
-        phone: phone,
-        members: extractMembers()
-      };
+      var m = getValue("managerName");
+      var em = getValue("email");
+      var ph = getValue("phone");
 
-      generateQRCode(data);
-    });
-  });
-})();
+      v
