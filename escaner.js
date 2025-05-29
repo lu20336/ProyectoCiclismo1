@@ -1,5 +1,3 @@
-/* QR SCANNER FOR MAXIMUM CODACY COMPLIANCE */
-
 (function () {
   if (typeof navigator === "undefined" || typeof document === "undefined") return;
 
