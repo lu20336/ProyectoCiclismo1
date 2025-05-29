@@ -1,0 +1,34 @@
+engines:
+  eslint:
+    enabled: true
+    extra_args:
+      - "--parser-options=ecmaVersion:2021"
+      - "--env=browser"
+      - "--rule=no-var: error"
+      - "--rule=prefer-const: warn"
+      - "--rule=arrow-body-style: off"
+      - "--rule=prefer-arrow-callback: off"
+      - "--rule=prefer-template: off"
+      - "--rule=no-template-curly-in-string: off"
+      - "--rule=no-restricted-syntax: off"
+      - "--rule=dot-notation: off"
+      - "--rule=no-undef: off"
+      - "--rule=spaced-comment: off"
+      - "--rule=no-useless-escape: off"
+      - "--rule=consistent-return: off"
+      - "--rule=no-inner-declarations: off"
+      - "--rule=no-alert: off"
+      - "--rule=no-console: off"
+      - "--rule=no-unused-vars: warn"
+      - "--rule=no-duplicate-imports: off"
+      - "--rule=no-unused-expressions: off"
+      - "--rule=camelcase: off"
+      - "--rule=func-style: off"
+      - "--rule=default-case: off"
+      - "--rule=class-methods-use-this: off"
+ignore_paths:
+  - node_modules/
+  - .scannerwork/
+  - .vscode/
+  - dist/
+  - build/
