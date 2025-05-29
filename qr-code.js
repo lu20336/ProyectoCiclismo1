@@ -4,22 +4,31 @@ if (typeof document !== "undefined") {
     if (!generateBtn) return;
 
     generateBtn.addEventListener("click", function () {
-      var teamName = _.trim(document.getElementById("teamName")?.value || "");
-      var managerName = _.trim(document.getElementById("managerName")?.value || "");
-      var email = _.trim(document.getElementById("email")?.value || "");
-      var phone = _.trim(document.getElementById("phone")?.value || "");
+      var teamInput = document.getElementById("teamName");
+      var managerInput = document.getElementById("managerName");
+      var emailInput = document.getElementById("email");
+      var phoneInput = document.getElementById("phone");
+
+      var teamName = teamInput ? _.trim(teamInput.value) : "";
+      var managerName = managerInput ? _.trim(managerInput.value) : "";
+      var email = emailInput ? _.trim(emailInput.value) : "";
+      var phone = phoneInput ? _.trim(phoneInput.value) : "";
 
       if (!teamName) {
         alert("⚠️ Team name is required.");
         return;
       }
 
-      var members = Array.prototype.slice.call(document.querySelectorAll("#memberContainer > div")).map(function (div) {
+      var containers = document.querySelectorAll("#memberContainer > div");
+      var members = _.map(containers, function (div) {
         var inputs = div.querySelectorAll("input");
+        var name = inputs.length > 0 ? _.trim(inputs[0].value) : "";
+        var mail = inputs.length > 1 ? _.trim(inputs[1].value) : "";
+        var tel = inputs.length > 2 ? _.trim(inputs[2].value) : "";
         return {
-          name: _.trim(inputs[0]?.value || ""),
-          email: _.trim(inputs[1]?.value || ""),
-          phone: _.trim(inputs[2]?.value || "")
+          name: name,
+          email: mail,
+          phone: tel
         };
       });
 
