@@ -2,49 +2,73 @@
   if (typeof window === "undefined" || !window.navigator || !window.document) return;
 
   function sanitize(val) {
-    return _.isString(val)
-      ? _.replace(_.replace(val, /</g, "[" + "lt" + "]"), />/g, "[" + "gt" + "]")
-      : "";
+    if (!_.isString(val)) return "";
+    return _.replace(_.replace(val, /</g, "[" + "lt" + "]"), />/g, "[" + "gt" + "]");
   }
 
-  function updateText(id, textValue) {
-    var el = window.document && window.document.getElementById ? window.document.getElementById(id) : null;
-    if (el) {
-      el.textContent = textValue;
-    }
+  function setText(id, textValue) {
+    var el = window.document.getElementById(id);
+    if (el) el.textContent = textValue;
+  }
+
+  function formatMember(member) {
+    return "* " + sanitize(member.name) + " - " + sanitize(member.email);
   }
 
   function formatMembers(members) {
     if (!_.isArray(members)) return "";
-    return members
-      .map(function (member) {
-        return "* " + sanitize(member.name) + " - " + sanitize(member.email);
-      })
-      .join("\n");
+    return members.map(formatMember).join("\n");
   }
 
   function formatTeamInfo(data) {
-    var output = formatMembers(data.members) + "\n";
-    output += "Name: " + sanitize(data.teamName) + "\n";
-    output += "Manager: " + sanitize(data.manager) + "\n";
-    output += "Email: " + sanitize(data.email) + "\n";
-    output += "Phone: " + sanitize(data.phone) + "\n";
-    return output;
+    return [
+      formatMembers(data.members),
+      "Name: " + sanitize(data.teamName),
+      "Manager: " + sanitize(data.manager),
+      "Email: " + sanitize(data.email),
+      "Phone: " + sanitize(data.phone)
+    ].join("\n");
+  }
+
+  function parseQR(raw) {
+    try {
+      return JSON.parse(raw);
+    } catch (e) {
+      return null;
+    }
   }
 
   function processQR(raw) {
-    var data;
-    try {
-      data = JSON.parse(raw);
-    } catch (e) {
-      updateText("resultado", "Invalid QR data.");
+    var data = parseQR(raw);
+    if (!_.isObject(data)) {
+      setText("resultado", "Invalid QR data.");
       return;
     }
 
-    if (!_.isObject(data)) return;
+    setText("resultado", "QR read successfully.");
+    setText("infoEquipo", formatTeamInfo(data));
+  }
 
-    updateText("resultado", "QR read successfully.");
-    updateText("infoEquipo", formatTeamInfo(data));
+  function handleQRCode(code, alreadyScanned) {
+    if (code && code.data && !alreadyScanned.value) {
+      alreadyScanned.value = true;
+      processQR(code.data);
+    }
+  }
+
+  function scanFrame(video, canvasElement, canvas, alreadyScanned) {
+    canvasElement.width = video.videoWidth;
+    canvasElement.height = video.videoHeight;
+    canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
+
+    var imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
+    if (!_.isFunction(window.jsQR)) return;
+
+    var code = window.jsQR(imageData.data, imageData.width, imageData.height, {
+      inversionAttempts: "dontInvert"
+    });
+
+    handleQRCode(code, alreadyScanned);
   }
 
   function startScanner(video) {
@@ -55,34 +79,20 @@
 
       var canvasElement = window.document.createElement("canvas");
       var canvas = canvasElement.getContext("2d");
-      var alreadyScanned = false;
+      var alreadyScanned = { value: false };
 
-      function scanFrame() {
-        if (alreadyScanned) return;
-
-        canvasElement.width = video.videoWidth;
-        canvasElement.height = video.videoHeight;
-        canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
-
-        var imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
-        if (!_.isFunction(window.jsQR)) return;
-
-        var code = window.jsQR(imageData.data, imageData.width, imageData.height, {
-          inversionAttempts: "dontInvert"
-        });
-
-        if (code && code.data) {
-          alreadyScanned = true;
-          processQR(code.data);
-        }
-      }
-
-      setInterval(scanFrame, 1000);
+      window.setInterval(function () {
+        scanFrame(video, canvasElement, canvas, alreadyScanned);
+      }, 1000);
     }).catch(function () {
-      updateText("resultado", "Cannot access camera.");
+      setText("resultado", "Cannot access camera.");
     });
   }
 
-  var video = window.document && window.document.getElementById ? window.document.getElementById("preview") : null;
-  if (video) startScanner(video);
+  function init() {
+    var video = window.document.getElementById("preview");
+    if (video) startScanner(video);
+  }
+
+  init();
 })();
