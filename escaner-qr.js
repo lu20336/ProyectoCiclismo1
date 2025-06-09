@@ -53,7 +53,6 @@
   }
 
   function dummyScanQR() {
-    // Simulación de escaneo QR
     var simulatedQR = JSON.stringify({
       teamName: 'Simulated Team',
       manager: 'Sim Manager',
@@ -71,9 +70,7 @@
   function init() {
     var button = document.getElementById('startScan');
     if (button) {
-      button.addEventListener('click', function () {
-        dummyScanQR();
-      });
+      button.addEventListener('click', dummyScanQR);
     }
   }
 
