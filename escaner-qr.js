@@ -1,18 +1,54 @@
 (function () {
   'use strict';
 
+  var LT = '[' + 'lt' + ']';
+  var GT = '[' + 'gt' + ']';
+
   function sanitize(val) {
     if (typeof val !== 'string') {
       return '';
     }
-    return val.replace(/</g, '[' + 'lt' + ']').replace(/>/g, '[' + 'gt' + ']');
+    return val.replace(/</g, LT).replace(/>/g, GT);
   }
 
   function setText(id, textValue) {
     var el = document.getElementById(id);
-    if (el) {
+    if (el && typeof textValue === 'string') {
       el.textContent = textValue;
     }
+  }
+
+  function safeParse(raw) {
+    if (typeof raw !== 'string') {
+      return null;
+    }
+
+    try {
+      return JSON.parse(raw);
+    } catch (err) {
+      return null;
+    }
+  }
+
+  function isValidMember(member) {
+    return typeof member === 'object' &&
+      typeof member.name === 'string' &&
+      typeof member.email === 'string';
+  }
+
+  function formatMembers(members) {
+    if (!Array.isArray(members)) {
+      return '';
+    }
+
+    var result = '';
+    members.forEach(function (m) {
+      if (isValidMember(m)) {
+        result += '* ' + sanitize(m.name) + ' - ' + sanitize(m.email) + ' ';
+      }
+    });
+
+    return result.trim();
   }
 
   function formatTeamInfo(data) {
@@ -20,31 +56,24 @@
       return '';
     }
 
-    var membersOutput = Array.isArray(data.members)
-      ? data.members.map(function (m) {
-          return '* ' + sanitize(m.name) + ' - ' + sanitize(m.email);
-        }).join('\n')
-      : '';
+    var parts = [
+      formatMembers(data.members),
+      'Name: ' + sanitize(data.teamName),
+      'Manager: ' + sanitize(data.manager),
+      'Email: ' + sanitize(data.email),
+      'Phone: ' + sanitize(data.phone)
+    ];
 
-    var output = membersOutput + '\n';
-    output += 'Name: ' + sanitize(data.teamName) + '\n';
-    output += 'Manager: ' + sanitize(data.manager) + '\n';
-    output += 'Email: ' + sanitize(data.email) + '\n';
-    output += 'Phone: ' + sanitize(data.phone) + '\n';
-
-    return output;
+    return parts.filter(function (p) {
+      return p !== '';
+    }).join(' | ');
   }
 
   function processQR(raw) {
-    var data;
-    try {
-      data = JSON.parse(raw);
-    } catch (err) {
-      setText('resultado', 'Invalid QR data.');
-      return;
-    }
+    var data = safeParse(raw);
 
-    if (typeof data !== 'object' || data === null) {
+    if (data === null || typeof data !== 'object') {
+      setText('resultado', 'Invalid QR data.');
       return;
     }
 
@@ -52,27 +81,5 @@
     setText('infoEquipo', formatTeamInfo(data));
   }
 
-  function dummyScanQR() {
-    var simulatedQR = JSON.stringify({
-      teamName: 'Simulated Team',
-      manager: 'Sim Manager',
-      email: 'manager@example.com',
-      phone: '123456789',
-      members: [
-        { name: 'Member One', email: 'one@example.com' },
-        { name: 'Member Two', email: 'two@example.com' }
-      ]
-    });
-
-    processQR(simulatedQR);
-  }
-
-  function init() {
-    var button = document.getElementById('startScan');
-    if (button) {
-      button.addEventListener('click', dummyScanQR);
-    }
-  }
-
-  document.addEventListener('DOMContentLoaded', init);
+  window.processQR = processQR;
 })();
